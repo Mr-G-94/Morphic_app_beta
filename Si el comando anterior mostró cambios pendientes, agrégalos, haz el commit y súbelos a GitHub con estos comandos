@@ -1,0 +1,8 @@
+# 1. Agrega todos los cambios locales al área de preparación
+git add .
+
+# 2. Crea el commit con un mensaje descriptivo
+git commit -m "chore: sync remaining local changes and database configurations"
+
+# 3. Sube los cambios a tu repositorio en GitHub
+git push origin main
