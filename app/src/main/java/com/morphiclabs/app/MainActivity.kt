@@ -8,25 +8,40 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.morphiclabs.core.MessageProcessor
-import com.morphiclabs.data.MiddlewareLocal // Using direct instantiation for now, DI module will handle this
-import com.morphiclabs.ui.MorphicLabsScreen
 import com.morphiclabs.ui.theme.MorphicLabsAppTheme
+import com.morphiclabs.di.AgentRegistry
+import com.morphiclabs.core.base.AgentContract // Needed for dummy agent if we add one, otherwise not strictly here.
+
+// For now, let's include the MorphicLabsScreen from the UI module for initial rendering.
+// This will be replaced by a more dynamic shell UI in future phases.
+import com.morphiclabs.ui.MorphicLabsScreen
 
 class MainActivity : ComponentActivity() {
-    // In a real DI setup, this would be injected by the :di module.
-    // For now, we instantiate it directly to ensure the app compiles and runs.
-    private val messageProcessor: MessageProcessor = MiddlewareLocal()
+    // The AgentRegistry will be injected in a real DI setup.
+    // For now, we instantiate it directly in the shell.
+    private val agentRegistry: AgentRegistry = AgentRegistry()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Example: Register a dummy agent to show the registry is working
+        agentRegistry.registerAgent(object : AgentContract {
+            override suspend fun canHandle(command: String): Boolean {
+                return command.contains("hello", ignoreCase = true)
+            }
+            override suspend fun execute(input: String): String {
+                return "Hello from Dummy Agent! You said: $input"
+            }
+        })
+
         setContent {
             MorphicLabsAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MorphicLabsAppEntry(messageProcessor = messageProcessor)
+                    // The main entry point of the application, now consuming the AgentRegistry
+                    MorphicLabsAppEntry(agentRegistry = agentRegistry)
                 }
             }
         }
@@ -34,6 +49,17 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MorphicLabsAppEntry(messageProcessor: MessageProcessor) {
-    MorphicLabsScreen(messageProcessor = messageProcessor)
+fun MorphicLabsAppEntry(agentRegistry: AgentRegistry) {
+    // This is currently a placeholder for the unified chat UI.
+    // In future phases, this will interact with the agentRegistry to dynamically
+    // render UI components based on agent responses.
+    // For demonstration, we'll keep the existing MorphicLabsScreen but it
+    // should ideally be refactored to consume the AgentRegistry itself
+    // or be replaced by the actual shell UI.
+    MorphicLabsScreen(messageProcessor = object : com.morphiclabs.core.MessageProcessor {
+        override suspend fun procesarMensaje(texto: String): String {
+            val agent = agentRegistry.findAgentToHandle(texto)
+            return agent?.execute(texto) ?: "No agent found to handle: $texto"
+        }
+    })
 }
