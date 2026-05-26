@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "MorphicLabsApp"
-include(":app")
+include(":app", ":core", ":data", ":ui", ":di")
