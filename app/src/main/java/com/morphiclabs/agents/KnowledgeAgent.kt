@@ -17,12 +17,14 @@ class KnowledgeAgent(private val context: Context) : AgentContract {
         }
 
         return try {
-            // Abre o crea la base de datos morphic_gateway.db en el contexto privado de la app
-            val db: SQLiteDatabase = context.openOrCreateDatabase(
-                "morphic_gateway.db",
-                Context.MODE_PRIVATE,
-                null
-            )
+            // Obtiene la ruta del archivo de la base de datos usando getDatabasePath
+            val dbFile = context.getDatabasePath("morphic_gateway.db")
+            
+            // Asegura que el directorio padre (databases/) exista
+            dbFile.parentFile?.mkdirs()
+
+            // Abre o crea la base de datos SQLite usando el archivo obtenido
+            val db: SQLiteDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
 
             db.use { database ->
                 database.rawQuery(sqlQuery, null).use { cursor ->
