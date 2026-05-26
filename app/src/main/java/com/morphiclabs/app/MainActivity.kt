@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import com.morphiclabs.ui.theme.MorphicLabsAppTheme
 import com.morphiclabs.di.AgentRegistry
 import com.morphiclabs.core.base.AgentContract // Needed for dummy agent if we add one, otherwise not strictly here.
+import com.morphiclabs.agents.KnowledgeAgent
 
 // For now, let's include the MorphicLabsScreen from the UI module for initial rendering.
 // This will be replaced by a more dynamic shell UI in future phases.
@@ -33,6 +34,9 @@ class MainActivity : ComponentActivity() {
                 return "Hello from Dummy Agent! You said: $input"
             }
         })
+
+        // Register the new KnowledgeAgent
+        agentRegistry.registerAgent(KnowledgeAgent(this))
 
         setContent {
             MorphicLabsAppTheme {
