@@ -36,6 +36,9 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":data"))
     implementation(project(":ui"))
+    // Dependencies for the shell to consume AgentRegistry and AgentContract
+    implementation(project(":di"))
+    implementation(project(":core-base"))
 
     implementation("androidx.core:core-ktx:1.9.0")
     testImplementation("junit:junit:4.13.2")
