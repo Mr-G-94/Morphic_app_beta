@@ -6,3 +6,4 @@ app/build/
 .idea/
 *.jar
 local.properties
+.aider*
