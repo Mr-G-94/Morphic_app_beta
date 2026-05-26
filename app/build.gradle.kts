@@ -30,17 +30,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        // Updated to Java 17 for consistency with other modules
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4" // Match with Kotlin version 1.9.20
+        kotlinCompilerExtensionVersion = "1.5.1" // Align with module UI
     }
     packaging {
         resources {
@@ -50,21 +51,31 @@ android {
 }
 
 dependencies {
+    // Module dependencies
+    implementation(project(":ui"))
+    implementation(project(":di")) // Even if empty, include it for the structure
+    implementation(project(":data")) // MainActivity needs access to MiddlewareLocal directly for now
+
+    // General Android dependencies needed by the app module itself
     implementation("androidx.core:core-ktx:1.9.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
-    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1") // Align with module UI
+    implementation("androidx.activity:activity-compose:1.8.0") // Align with module UI
+
+    // Remove UI specific dependencies, as they are now in the :ui module
     implementation(platform("androidx.compose:compose-bom:2023.08.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // implementation("androidx.compose.ui:ui") // Moved to :ui
+    // implementation("androidx.compose.ui:ui-graphics") // Moved to :ui
+    // implementation("androidx.compose.ui:ui-tooling-preview") // Moved to :ui
+    // implementation("androidx.compose.material3:material3") // Moved to :ui
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0") // Keep if needed for app module directly
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    // Remove UI specific test dependencies, as they are now in the :ui module
+    // androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00")) // Moved to :ui
+    // androidTestImplementation("androidx.compose.ui:ui-test-junit4") // Moved to :ui
+    // debugImplementation("androidx.compose.ui:ui-tooling") // Moved to :ui
+    // debugImplementation("androidx.compose.ui:ui-test-manifest") // Moved to :ui
 }
