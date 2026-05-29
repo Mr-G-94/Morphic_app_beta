@@ -22,7 +22,7 @@ class GatewayAgent : AgentContract {
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
         try {
             val json = JSONObject().apply {
-                put("model", "gpt-3.5-turbo")
+                put("model", "gemini-1.5-flash")
                 put("messages", JSONArray().apply {
                     put(JSONObject().apply {
                         put("role", "user")
@@ -35,7 +35,7 @@ class GatewayAgent : AgentContract {
             val body = RequestBody.create(mediaType, json.toString())
 
             val request = Request.Builder()
-                .url("http://127.0.0.1:8000/v1/chat/completions")
+                .url("http://127.0.0.1:8000/chat/completions")
                 .post(body)
                 .build()
 
