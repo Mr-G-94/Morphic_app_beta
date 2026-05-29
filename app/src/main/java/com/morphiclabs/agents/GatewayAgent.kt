@@ -35,7 +35,7 @@ class GatewayAgent : AgentContract {
             val body = RequestBody.create(mediaType, json.toString())
 
             val request = Request.Builder()
-                .url("http://127.0.0.1:8000/chat/completions")
+                .url("http://127.0.0.1:8000/v1/chat/completions")
                 .post(body)
                 .build()
 
