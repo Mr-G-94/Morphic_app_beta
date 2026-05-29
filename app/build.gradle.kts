@@ -41,7 +41,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1" // Align with module UI
+        kotlinCompilerExtensionVersion = "1.5.14" // Updated for compatibility with Kotlin 1.9.20
     }
     packaging {
         resources {
