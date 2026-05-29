@@ -7,6 +7,7 @@ import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -30,7 +31,7 @@ class GatewayAgent : AgentContract {
                 })
             }
 
-            val mediaType = MediaType.parse("application/json; charset=utf-8")
+            val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
             val body = RequestBody.create(mediaType, json.toString())
 
             val request = Request.Builder()
