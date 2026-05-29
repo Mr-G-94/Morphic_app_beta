@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         agentRegistry.registerAgent(KnowledgeAgent(this))
 
         // Register the new GatewayAgent as the default agent (handles any non-empty command)
-        agentRegistry.registerAgent(GatewayAgent())
+        agentRegistry.registerAgent(GatewayAgent(this))
 
         setContent {
             MorphicLabsAppTheme {
