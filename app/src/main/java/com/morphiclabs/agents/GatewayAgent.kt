@@ -22,7 +22,7 @@ class GatewayAgent : AgentContract {
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
         try {
             val json = JSONObject().apply {
-                put("model", "gemini-1.5-flash")
+                put("model", "gemini-3.5-flash")
                 put("messages", JSONArray().apply {
                     put(JSONObject().apply {
                         put("role", "user")
