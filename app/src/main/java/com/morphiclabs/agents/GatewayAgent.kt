@@ -4,10 +4,11 @@ import com.morphiclabs.core.base.AgentContract
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -32,7 +33,8 @@ class GatewayAgent : AgentContract {
             }
 
             val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-            val body = RequestBody.create(mediaType, json.toString())
+            // Usamos la extensión moderna toRequestBody
+            val body = json.toString().toRequestBody(mediaType!!)
 
             val request = Request.Builder()
                 .url("http://127.0.0.1:8000/v1/chat/completions")
@@ -52,7 +54,6 @@ class GatewayAgent : AgentContract {
                     val message = firstChoice.getJSONObject("message")
                     message.getString("content")
                 } catch (e: Exception) {
-                    // Si no se puede parsear como JSON estándar de OpenAI, devolvemos el cuerpo crudo
                     responseBody
                 }
             }
