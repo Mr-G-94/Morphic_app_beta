@@ -13,8 +13,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    consumerProGuardFiles("consumer-rules.pro")
-
     buildTypes {
         release {
             isMinifyEnabled = false
