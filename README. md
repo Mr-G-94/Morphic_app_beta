@@ -1,0 +1,48 @@
+# Morphic App Beta 📱🧠
+
+**Modular Android Framework for AI-Driven Agent Architectures.**
+
+Morphic App Beta is an open-source initiative under the **Morphic Labs** umbrella. We are building a highly modular, resilient, and extensible Android application framework specifically designed to host AI agents as independent plugins.
+
+## ⚠️ Project Status: Under Active Development
+This project is currently in the **alpha/experimental phase**. The architecture is being refactored to support a strict "Shell-Plugin" design. Expect breaking changes and potential build issues as we stabilize the core framework. Contributions are welcome, but please expect "Work in Progress" states.
+
+## Vision: The "Shell-Plugin" Architecture
+The core philosophy of Morphic App is to decouple the UI (The Shell) from the business logic (The Agents/Plugins). 
+
+- **The Shell (`:app`):** A thin, unopinionated container. It doesn't contain business logic; it merely renders what the registered agents request.
+- **The Core (`:core-*`):** A set of contracts and libraries that ensure communication consistency (Networking, Database, DI).
+- **The Agents (`:feature-*`):** Independent modules that encapsulate specific features, logic, and UI components. They are "pluggable" and unaware of each other.
+
+## Architecture Highlights
+- **Clean Modularization:** Strict boundaries between modules to ensure decoupling.
+- **Reactive Design:** Built with Kotlin and Jetpack Compose for a responsive UI.
+- **Agent-First:** The system is designed to scale horizontally by adding new plugins without modifying the Shell.
+- **Resilient Networking:** Integrated with custom Gateway patterns for robust LLM API management.
+
+## Tech Stack
+- **Language:** Kotlin
+- **UI Toolkit:** Jetpack Compose
+- **Architecture:** Feature-based modularization, MVVM, Clean Architecture.
+- **Dependency Injection:** Hilt/Dagger (To be finalized).
+- **CI/CD:** GitHub Actions (Automated build pipeline).
+
+## Development Roadmap
+- [ ] **Fix Build Pipeline:** Stabilizing ProGuard/R8 configurations for library modules.
+- [ ] **Core Contract Definition:** Finalizing the `AgentContract` interface.
+- [ ] **Gateway Integration:** Implementing the proxy layer for secure, rotatable LLM access.
+- [ ] **Shell UI Implementation:** Dynamic widget rendering based on agent responses.
+- [ ] **Plugin Discovery System:** Enabling the dynamic loading of features.
+
+## Getting Started
+*Note: The project currently requires specific configuration due to its modular nature. Please ensure your environment is set up for Android library development.*
+
+1. Clone the repository.
+2. Initialize submodules (if applicable).
+3. Run `./gradlew assembleDebug` (Current build status: **Experimental**).
+
+## Philosophy
+At Morphic Labs, we believe that AI applications should be modular, privacy-focused, and robust. We are building the scaffolding for the next generation of mobile AI experiences.
+
+---
+*Built with passion by Mr_G_94.*
