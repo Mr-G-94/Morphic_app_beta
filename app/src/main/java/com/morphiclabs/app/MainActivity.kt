@@ -12,6 +12,7 @@ import com.morphiclabs.ui.theme.MorphicLabsAppTheme
 import com.morphiclabs.di.AgentRegistry
 import com.morphiclabs.core.base.AgentContract // Needed for dummy agent if we add one, otherwise not strictly here.
 import com.morphiclabs.agents.KnowledgeAgent
+import com.morphiclabs.agents.GatewayAgent
 
 // For now, let's include the MorphicLabsScreen from the UI module for initial rendering.
 // This will be replaced by a more dynamic shell UI in future phases.
@@ -37,6 +38,9 @@ class MainActivity : ComponentActivity() {
 
         // Register the new KnowledgeAgent
         agentRegistry.registerAgent(KnowledgeAgent(this))
+
+        // Register the new GatewayAgent as the default agent (handles any non-empty command)
+        agentRegistry.registerAgent(GatewayAgent(this))
 
         setContent {
             MorphicLabsAppTheme {
