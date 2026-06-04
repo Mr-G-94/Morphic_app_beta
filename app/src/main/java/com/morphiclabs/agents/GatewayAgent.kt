@@ -5,25 +5,37 @@ import com.morphiclabs.core.base.AgentContract
 import com.morphiclabs.core.security.KeyManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 
 class GatewayAgent(private val context: Context? = null) : AgentContract {
 
     private val client = OkHttpClient()
     private val keyManager = KeyManager()
+    
+    // Circuit Breaker State
+    private val failureCount = AtomicInteger(0)
+    private val MAX_FAILURES = 3
+    private var lastFailureTime = 0L
 
-    override suspend fun canHandle(command: String): Boolean {
-        return command.trim().isNotEmpty()
-    }
+    override suspend fun canHandle(command: String): Boolean = command.trim().isNotEmpty()
 
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
+        
+        // 1. Verificación de "Circuit Breaker"
+        if (failureCount.get() >= MAX_FAILURES) {
+            val cooldown = 30_000 // 30 segundos
+            if (System.currentTimeMillis() - lastFailureTime < cooldown) {
+                return@withContext "Gateway en modo protección (Circuit Open). Intenta en unos segundos."
+            } else {
+                failureCount.set(0) // Reset después de cooldown
+            }
+        }
+
         try {
             val json = JSONObject().apply {
                 put("model", "gemini-3.5-flash")
@@ -36,62 +48,53 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
             }
 
             val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-            // Usamos la extensión moderna toRequestBody
             val body = json.toString().toRequestBody(mediaType!!)
-
-            // Intentamos obtener la API Key guardada para el proveedor "gemini"
             val apiKey = context?.let { keyManager.getApiKey(it, "gemini") }
 
-            // Si hay una API Key configurada, podríamos usar el endpoint oficial de Gemini,
-            // de lo contrario usamos el endpoint local por defecto.
-            val url = if (!apiKey.isNullOrEmpty()) {
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
+            // 2. Selección Inteligente de Endpoint
+            val url = if (!apiKey.isNullOrEmpty() && failureCount.get() < MAX_FAILURES) {
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
             } else {
                 "http://127.0.0.1:8000/v1/chat/completions"
             }
 
-            val requestBuilder = Request.Builder()
-                .url(url)
-
-            if (!apiKey.isNullOrEmpty()) {
-                // Para la API oficial de Gemini, la key se suele pasar como query parameter o header.
-                // Aquí preparamos la estructura para soportar headers de autorización o query params.
-                requestBuilder.url("$url?key=$apiKey")
-            }
-
-            val request = requestBuilder.post(body).build()
+            val request = Request.Builder().url(url).post(body).build()
 
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    return@withContext "Error al contactar al Gateway: Código de respuesta ${response.code}"
+                    handleFailure()
+                    return@withContext "Gateway Error: ${response.code}"
                 }
-                val responseBody = response.body?.string() ?: return@withContext "Error al contactar al Gateway: Respuesta vacía"
 
-                try {
-                    val jsonResponse = JSONObject(responseBody)
-                    val choices = jsonResponse.optJSONArray("choices")
-                    if (choices != null && choices.length() > 0) {
-                        val firstChoice = choices.getJSONObject(0)
-                        val message = firstChoice.getJSONObject("message")
-                        message.getString("content")
-                    } else {
-                        // Estructura alternativa (por ejemplo, respuesta directa de Gemini API)
-                        val candidates = jsonResponse.optJSONArray("candidates")
-                        if (candidates != null && candidates.length() > 0) {
-                            val firstCandidate = candidates.getJSONObject(0)
-                            val content = firstCandidate.getJSONObject("content")
-                            val parts = content.getJSONArray("parts")
-                            parts.getJSONObject(0).getString("text")
-                        } else {
-                            responseBody
-                        }
-                    }
-                } catch (e: Exception) {
-                    responseBody
-                }
+                val responseBody = response.body?.string() ?: return@withContext "Respuesta vacía"
+                
+                // Si llegamos aquí, éxito: reset de errores
+                failureCount.set(0)
+                
+                return@withContext parseResponse(responseBody)
             }
         } catch (e: Exception) {
-            "Error al contactar al Gateway: ${e.message}"
+            handleFailure()
+            "Gateway Exception: ${e.message}"
+        }
+    }
+
+    private fun handleFailure() {
+        failureCount.incrementAndGet()
+        lastFailureTime = System.currentTimeMillis()
+    }
+
+    private fun parseResponse(body: String): String {
+        return try {
+            val json = JSONObject(body)
+            // Logica unificada para Gemini o Local
+            when {
+                json.has("choices") -> json.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
+                json.has("candidates") -> json.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
+                else -> body
+            }
+        } catch (e: Exception) {
+            body
         }
     }
 }
