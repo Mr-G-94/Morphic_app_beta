@@ -39,17 +39,21 @@ class BotService : Service() {
 
     private suspend fun listenToTelegram() {
         var lastUpdateId = 0L
-        while (isActive) {
+        // CORREGIDO: Referenciamos el scope explícitamente
+        while (serviceScope.isActive) {
             try {
                 // Aquí iría tu llamada HTTP a Telegram
                 // api.telegram.org/bot<TOKEN>/getUpdates?offset=$lastUpdateId&timeout=30
-                
+
                 // Ejemplo conceptual:
                 // val updates = telegramApi.getUpdates(lastUpdateId, timeout = 30)
                 // for (update in updates) {
                 //     dispatcher.dispatch("telegram", update.chatId, update.text)
                 //     lastUpdateId = update.id + 1
                 // }
+                
+                // Delay para no saturar el CPU mientras no hay nada
+                delay(1000) 
             } catch (e: Exception) {
                 delay(5000) // Si falla, esperamos 5 seg antes de reintentar
             }
