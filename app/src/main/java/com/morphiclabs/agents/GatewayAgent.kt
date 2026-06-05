@@ -13,7 +13,6 @@ import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicInteger
 
 class GatewayAgent(private val context: Context? = null) : AgentContract {
-
     private val client = OkHttpClient()
     private val keyManager = KeyManager()
     
@@ -25,7 +24,7 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
     override suspend fun canHandle(command: String): Boolean = command.trim().isNotEmpty()
 
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
-        
+
         // 1. Verificación de "Circuit Breaker"
         if (failureCount.get() >= MAX_FAILURES) {
             val cooldown = 30_000 // 30 segundos
@@ -51,15 +50,14 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
             val body = json.toString().toRequestBody(mediaType!!)
             val apiKey = context?.let { keyManager.getApiKey(it, "gemini") }
 
-            // 2. Selección Inteligente de Endpoint
-            val url = if (!apiKey.isNullOrEmpty() && failureCount.get() < MAX_FAILURES) {
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
-            } else {
-                "http://127.0.0.1:8000/v1/chat/completions"
+            // 2. Selección de Endpoint (Hardcoding local eliminado)
+            if (apiKey.isNullOrEmpty()) {
+                return@withContext "Gateway Error: API Key no configurada."
             }
-
+            
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
             val request = Request.Builder().url(url).post(body).build()
-
+            
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     handleFailure()
@@ -67,10 +65,9 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
                 }
 
                 val responseBody = response.body?.string() ?: return@withContext "Respuesta vacía"
-                
+
                 // Si llegamos aquí, éxito: reset de errores
                 failureCount.set(0)
-                
                 return@withContext parseResponse(responseBody)
             }
         } catch (e: Exception) {
@@ -87,7 +84,6 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
     private fun parseResponse(body: String): String {
         return try {
             val json = JSONObject(body)
-            // Logica unificada para Gemini o Local
             when {
                 json.has("choices") -> json.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
                 json.has("candidates") -> json.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
