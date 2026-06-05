@@ -1,5 +1,6 @@
 package com.morphiclabs.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +23,7 @@ import com.morphiclabs.agents.GatewayAgent
 import com.morphiclabs.ui.MorphicLabsScreen
 import com.morphiclabs.core.security.AppConfigManager
 import com.morphiclabs.ui.screens.SettingsScreen
+import com.morphiclabs.app.services.BotService
 
 class MainActivity : ComponentActivity() {
     private val agentRegistry: AgentRegistry = AgentRegistry()
@@ -51,12 +53,19 @@ class MainActivity : ComponentActivity() {
                     var showSettings by remember { mutableStateOf(false) }
 
                     if (showSettings) {
-                        SettingsScreen(configManager, onBack = { showSettings = false })
+                        SettingsScreen(
+                            configManager = configManager,
+                            onBack = { showSettings = false },
+                            onSave = {
+                                // Disparamos el BotService al guardar
+                                val intent = Intent(this, BotService::class.java)
+                                startForegroundService(intent)
+                            }
+                        )
                     } else {
                         Box(modifier = Modifier.fillMaxSize()) {
                             MorphicLabsAppEntry(agentRegistry = agentRegistry)
-                            
-                            // Botón flotante para Settings
+
                             FloatingActionButton(
                                 onClick = { showSettings = true },
                                 modifier = Modifier

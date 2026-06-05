@@ -10,7 +10,11 @@ import androidx.compose.ui.unit.dp
 import com.morphiclabs.core.security.AppConfigManager
 
 @Composable
-fun SettingsScreen(configManager: AppConfigManager, onBack: () -> Unit) {
+fun SettingsScreen(
+    configManager: AppConfigManager,
+    onBack: () -> Unit,
+    onSave: () -> Unit // Nuevo callback
+) {
     var telegramKey by remember { mutableStateOf(configManager.getApiKey("telegram") ?: "") }
     var whatsappKey by remember { mutableStateOf(configManager.getApiKey("whatsapp") ?: "") }
     var geminiKey by remember { mutableStateOf(configManager.getApiKey("gemini") ?: "") }
@@ -63,10 +67,11 @@ fun SettingsScreen(configManager: AppConfigManager, onBack: () -> Unit) {
                 configManager.saveApiKey("whatsapp", whatsappKey)
                 configManager.saveApiKey("gemini", geminiKey)
                 configManager.saveApiKey("mode_audio", audioResponse.toString())
+                onSave() // Ejecutamos el servicio aquí
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Guardar Configuración")
+            Text("Guardar y Activar Bot")
         }
 
         OutlinedButton(
