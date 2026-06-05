@@ -11,7 +11,7 @@ class AppConfigManager(context: Context) {
 
     private val sharedPreferences = EncryptedSharedPreferences.create(
         context,
-        "secure_config",
+        "secure_api_keys",
         masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
