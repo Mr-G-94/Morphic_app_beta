@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.morphiclabs.ui.components.MorphicCard
+import com.morphiclabs.ui.components.MorphicProgressBar
 import com.morphiclabs.ui.viewmodel.DashboardViewModel
 
 @Composable
@@ -35,13 +36,15 @@ fun DashboardScreen(onNavigateToSettings: () -> Unit, viewModel: DashboardViewMo
                 MorphicCard(modifier = Modifier.weight(1f)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("CPU", color = MaterialTheme.colorScheme.onSurface)
-                        Text("${(stats.cpuUsage * 100).toInt()}%", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MorphicProgressBar(progress = stats.cpuUsage)
                     }
                 }
                 MorphicCard(modifier = Modifier.weight(1f)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("RAM", color = MaterialTheme.colorScheme.onSurface)
-                        Text("${(stats.memUsage * 100).toInt()}%", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MorphicProgressBar(progress = stats.memUsage)
                     }
                 }
             }
@@ -50,6 +53,7 @@ fun DashboardScreen(onNavigateToSettings: () -> Unit, viewModel: DashboardViewMo
             
             // Logs
             Text("Live Logs", color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(8.dp))
             MorphicCard(modifier = Modifier.height(200.dp)) {
                 LazyColumn(modifier = Modifier.padding(8.dp)) {
                     items(stats.logs) { log ->
