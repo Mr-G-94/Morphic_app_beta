@@ -3,15 +3,11 @@ package com.morphiclabs.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import com.morphiclabs.ui.theme.MorphicLabsAppTheme
 import com.morphiclabs.di.AgentRegistry
 import com.morphiclabs.agents.KnowledgeAgent
 import com.morphiclabs.agents.GatewayAgent
-import com.morphiclabs.ui.screens.DashboardScreen
-import com.morphiclabs.ui.screens.SettingsScreen
-import com.morphiclabs.core.security.AppConfigManager
+import com.morphiclabs.ui.MainScaffold
 
 class MainActivity : ComponentActivity() {
     private val agentRegistry: AgentRegistry by lazy {
@@ -25,28 +21,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MorphicLabsAppTheme {
-                MorphicLabsAppEntry(agentRegistry)
+                val gatewayAgent = GatewayAgent(this)
+                MainScaffold(
+                    messageProcessor = object : com.morphiclabs.core.MessageProcessor {
+                        override suspend fun procesarMensaje(texto: String): String {
+                            val agent = agentRegistry.findAgentToHandle(texto)
+                            return agent?.execute(texto) ?: "No agent found"
+                        }
+                    },
+                    modelProvider = gatewayAgent,
+                    onNavigateToSettings = {} 
+                )
             }
         }
-    }
-}
-
-@Composable
-fun MorphicLabsAppEntry(agentRegistry: AgentRegistry) {
-    val context = LocalContext.current
-    var showSettings by remember { mutableStateOf(false) }
-    val gatewayAgent = remember { GatewayAgent(context) }
-
-    if (showSettings) {
-        SettingsScreen(
-            configManager = AppConfigManager(context),
-            modelProvider = gatewayAgent,
-            onBack = { showSettings = false },
-            onSave = { showSettings = false }
-        )
-    } else {
-        DashboardScreen(
-            onNavigateToSettings = { showSettings = true }
-        )
     }
 }
