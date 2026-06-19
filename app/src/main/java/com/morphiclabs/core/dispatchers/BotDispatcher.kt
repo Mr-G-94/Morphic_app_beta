@@ -41,7 +41,6 @@ class BotDispatcher(
             
             val activeAgent = appConfigManager.getActiveAgent()
 
-            // Filtro estricto: Solo el agente "Ventas" puede ejecutar estas funciones
             if (activeAgent != "Ventas") {
                 return "Error: El agente actual ('$activeAgent') no tiene permisos para ejecutar funciones de ventas."
             }

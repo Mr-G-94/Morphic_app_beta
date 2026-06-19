@@ -21,12 +21,12 @@ class BotService : Service() {
     private val appConfigManager = AppConfigManager(this)
     
     private lateinit var telegramService: TelegramService
-    private val dispatcher = BotDispatcher(AgentRegistry(), inventoryService, clientDB)
+    // Aquí pasamos 'this' como contexto
+    private val dispatcher = BotDispatcher(AgentRegistry(), inventoryService, clientDB, this)
 
     override fun onCreate() {
         super.onCreate()
         
-        // Obtenemos el token de Telegram guardado previamente en el AppConfigManager
         val token = appConfigManager.getApiKey("telegram") ?: ""
         if (token.isNotEmpty()) {
             telegramService = TelegramService(token)
@@ -38,7 +38,7 @@ class BotService : Service() {
 
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("Achichincle Activo")
-            .setContentText("Conectado a Telegram...")
+            .setContentText("Agente: ${appConfigManager.getActiveAgent()}")
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
             .build()
 
@@ -71,7 +71,6 @@ class BotService : Service() {
                                 val text = message.optString("text")
                                 
                                 if (text.isNotEmpty()) {
-                                    // Procesamos el mensaje a través de nuestra IA y servicios
                                     val response = dispatcher.dispatch("telegram", chatId, text)
                                     telegramService.sendMessage(chatId, response)
                                 }
@@ -80,7 +79,7 @@ class BotService : Service() {
                     }
                 }
             } catch (e: Exception) {
-                delay(5000) // Espera antes de reintentar si falla la conexión
+                delay(5000)
             }
             delay(1000)
         }
