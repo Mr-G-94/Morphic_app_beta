@@ -24,8 +24,10 @@ fun SettingsScreen(
     var geminiKey by remember { mutableStateOf(configManager.getApiKey("gemini") ?: "") }
 
     var selectedModel by remember { mutableStateOf(configManager.getModel()) }
+    var activeAgent by remember { mutableStateOf(configManager.getActiveAgent()) }
     var availableModels by remember { mutableStateOf(listOf<String>()) }
     var expanded by remember { mutableStateOf(false) }
+    var agentExpanded by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -34,6 +36,20 @@ fun SettingsScreen(
         OutlinedTextField(value = telegramKey, onValueChange = { telegramKey = it }, label = { Text("Telegram API Key") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(value = whatsappKey, onValueChange = { whatsappKey = it }, label = { Text("WhatsApp API Key") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(value = geminiKey, onValueChange = { geminiKey = it }, label = { Text("Gemini API Key") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+
+        Text("Agente Activo", style = MaterialTheme.typography.labelLarge)
+        ExposedDropdownMenuBox(expanded = agentExpanded, onExpandedChange = { agentExpanded = !agentExpanded }) {
+            OutlinedTextField(
+                value = activeAgent, onValueChange = {}, readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = agentExpanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(expanded = agentExpanded, onDismissRequest = { agentExpanded = false }) {
+                listOf("General", "Ventas", "Código").forEach { agent ->
+                    DropdownMenuItem(text = { Text(agent) }, onClick = { activeAgent = agent; agentExpanded = false })
+                }
+            }
+        }
 
         Button(onClick = {
             coroutineScope.launch {
@@ -47,21 +63,9 @@ fun SettingsScreen(
 
         if (availableModels.isNotEmpty()) {
             ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                OutlinedTextField(
-                    value = selectedModel,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Modelo Seleccionado") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                )
+                OutlinedTextField(value = selectedModel, onValueChange = {}, readOnly = true, label = { Text("Modelo Seleccionado") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    availableModels.forEach { model ->
-                        DropdownMenuItem(
-                            text = { Text(model) },
-                            onClick = { selectedModel = model; expanded = false }
-                        )
-                    }
+                    availableModels.forEach { model -> DropdownMenuItem(text = { Text(model) }, onClick = { selectedModel = model; expanded = false }) }
                 }
             }
         }
@@ -71,6 +75,7 @@ fun SettingsScreen(
             configManager.saveApiKey("whatsapp", whatsappKey)
             configManager.saveApiKey("gemini", geminiKey)
             configManager.saveModel(selectedModel)
+            configManager.saveActiveAgent(activeAgent)
             onSave()
         }, modifier = Modifier.fillMaxWidth()) { Text("Guardar y Activar") }
 

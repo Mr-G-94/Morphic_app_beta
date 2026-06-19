@@ -43,11 +43,23 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
         val apiKey = appConfigManager.getApiKey("gemini")
         if (apiKey.isNullOrEmpty()) return@withContext "Error: API Key no configurada."
-        
+
         val modelName = appConfigManager.getModel().trim()
+        val activeAgent = appConfigManager.getActiveAgent()
+
+        // Asignamos la personalidad
+        val systemInstruction = when(activeAgent) {
+            "Ventas" -> "Eres la achichinclera de Emilio, experta en gourmet, quesos y vegetales. Persuasiva y ejecutiva."
+            "Código" -> "Eres el ayudante de Mr. G. Técnico, preciso, experto en arquitectura y desarrollo Android."
+            else -> "Eres un asistente general de Morphic Labs, servicial y eficiente."
+        }
+
         val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
-        
+
         val jsonBody = JSONObject().apply {
+            put("system_instruction", JSONObject().apply {
+                put("parts", JSONArray().apply { put(JSONObject().apply { put("text", systemInstruction) }) })
+            })
             put("contents", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "user")
@@ -61,10 +73,7 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
         try {
             client.newCall(request).execute().use { response ->
                 val responseData = response.body?.string()
-                if (!response.isSuccessful) {
-                    // AQUÍ ESTÁ EL CAMBIO: Te devolvemos el texto del error real
-                    return@withContext "Error HTTP ${response.code}: $responseData"
-                }
+                if (!response.isSuccessful) return@withContext "Error HTTP ${response.code}: $responseData"
                 return@withContext if (responseData != null) parseResponse(responseData) else "Error: Respuesta vacía."
             }
         } catch (e: Exception) { return@withContext "Excepción: ${e.message}" }
