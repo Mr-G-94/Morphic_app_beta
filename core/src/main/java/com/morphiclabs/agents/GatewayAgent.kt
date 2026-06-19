@@ -47,10 +47,9 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
         val modelName = appConfigManager.getModel().trim()
         val activeAgent = appConfigManager.getActiveAgent()
 
-        // Asignamos la personalidad
         val systemInstruction = when(activeAgent) {
-            "Ventas" -> "Eres la achichinclera de Emilio, experta en gourmet, quesos y vegetales. Persuasiva y ejecutiva."
-            "Código" -> "Eres el ayudante de Mr. G. Técnico, preciso, experto en arquitectura y desarrollo Android."
+            "Ventas" -> "Eres la achichinclera de Emilio. Gestiona inventario y envíos usando las herramientas disponibles."
+            "Código" -> "Eres el ayudante de Mr. G. Técnico, preciso y experto en arquitectura Android."
             else -> "Eres un asistente general de Morphic Labs, servicial y eficiente."
         }
 
@@ -60,6 +59,8 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
             put("system_instruction", JSONObject().apply {
                 put("parts", JSONArray().apply { put(JSONObject().apply { put("text", systemInstruction) }) })
             })
+            // Aquí inyectamos las herramientas filtradas por el agente activo
+            put("tools", getToolsDefinition(activeAgent)) 
             put("contents", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "user")
@@ -79,10 +80,47 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
         } catch (e: Exception) { return@withContext "Excepción: ${e.message}" }
     }
 
+    private fun getToolsDefinition(activeAgent: String): JSONArray {
+        val tools = JSONArray()
+        
+        // Solo añadimos herramientas si el agente es "Ventas"
+        if (activeAgent == "Ventas") {
+            tools.put(JSONObject().apply {
+                put("function_declarations", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("name", "obtener_inventario")
+                        put("description", "Consulta el inventario de productos.")
+                    })
+                    put(JSONObject().apply {
+                        put("name", "calcular_envio")
+                        put("description", "Calcula costo de envío.")
+                        put("parameters", JSONObject().apply {
+                            put("type", "OBJECT")
+                            put("properties", JSONObject().apply {
+                                put("ubicacion", JSONObject().apply { put("type", "STRING") })
+                            })
+                            put("required", JSONArray().put("ubicacion"))
+                        })
+                    })
+                })
+            })
+        }
+        // Si fuera otro agente, simplemente retornamos el array vacío
+        return tools
+    }
+
     private fun parseResponse(jsonResponse: String): String {
         return try {
-            JSONObject(jsonResponse).getJSONArray("candidates").getJSONObject(0)
-                .getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
+            val json = JSONObject(jsonResponse)
+            val part = json.getJSONArray("candidates").getJSONObject(0)
+                .getJSONObject("content").getJSONArray("parts").getJSONObject(0)
+            
+            if (part.has("functionCall")) {
+                val functionCall = part.getJSONObject("functionCall")
+                "FUNCTION_CALL:${functionCall.getString("name")}:${functionCall.getJSONObject("args")}"
+            } else {
+                part.getString("text")
+            }
         } catch (e: Exception) { "Error al interpretar: ${e.message}" }
     }
 }

@@ -1,22 +1,37 @@
 package com.morphiclabs.core.services
 
-class InventoryService {
-    // Simulamos una base de datos en memoria para este Sprint
-    // En el futuro, aquí conectarás tu DB (SQL/Room) o Sheets
-    private val inventory = mutableMapOf(
-        "producto_01" to 10,
-        "producto_02" to 5
-    )
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 
-    fun getStock(productId: String): Int {
-        return inventory[productId] ?: 0
+class InventoryService(private val context: Context) {
+
+    private fun getDb(): SQLiteDatabase {
+        val dbFile = context.getDatabasePath("morphic_gateway.db")
+        dbFile.parentFile?.mkdirs()
+        return SQLiteDatabase.openOrCreateDatabase(dbFile, null)
     }
 
-    fun updateStock(productId: String, quantityChange: Int): Boolean {
-        val currentStock = getStock(productId)
-        if (currentStock + quantityChange < 0) return false // No hay suficiente stock
-        
-        inventory[productId] = currentStock + quantityChange
-        return true
+    fun getInventory(): String {
+        return try {
+            getDb().use { db ->
+                // Asumimos una tabla 'productos', ajústalo según tu esquema real
+                val cursor = db.rawQuery("SELECT name, price, stock FROM products", null)
+                val results = mutableListOf<String>()
+                
+                if (cursor.moveToFirst()) {
+                    do {
+                        val name = cursor.getString(0)
+                        val price = cursor.getString(1)
+                        val stock = cursor.getString(2)
+                        results.add("$name: $$price (Stock: $stock)")
+                    } while (cursor.moveToNext())
+                }
+                cursor.close()
+                
+                if (results.isEmpty()) "El inventario está vacío." else results.joinToString("\n")
+            }
+        } catch (e: Exception) {
+            "Error consultando inventario: ${e.message}"
+        }
     }
 }
