@@ -13,11 +13,14 @@ import com.morphiclabs.core.security.AppConfigManager
 fun SettingsScreen(
     configManager: AppConfigManager,
     onBack: () -> Unit,
-    onSave: () -> Unit // Nuevo callback
+    onSave: () -> Unit
 ) {
     var telegramKey by remember { mutableStateOf(configManager.getApiKey("telegram") ?: "") }
     var whatsappKey by remember { mutableStateOf(configManager.getApiKey("whatsapp") ?: "") }
     var geminiKey by remember { mutableStateOf(configManager.getApiKey("gemini") ?: "") }
+    
+    // Estado para el modelo de Gemini
+    var selectedModel by remember { mutableStateOf(configManager.getModel()) }
     var audioResponse by remember { mutableStateOf(configManager.getApiKey("mode_audio") == "true") }
 
     Column(
@@ -52,6 +55,14 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        // Nuevo campo para configurar el modelo
+        OutlinedTextField(
+            value = selectedModel,
+            onValueChange = { selectedModel = it },
+            label = { Text("Modelo Gemini (ej. gemini-1.5-flash)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Preferir respuesta en Audio")
             Spacer(Modifier.weight(1f))
@@ -66,8 +77,9 @@ fun SettingsScreen(
                 configManager.saveApiKey("telegram", telegramKey)
                 configManager.saveApiKey("whatsapp", whatsappKey)
                 configManager.saveApiKey("gemini", geminiKey)
+                configManager.saveModel(selectedModel) // Persistimos el modelo
                 configManager.saveApiKey("mode_audio", audioResponse.toString())
-                onSave() // Ejecutamos el servicio aquí
+                onSave()
             },
             modifier = Modifier.fillMaxWidth()
         ) {

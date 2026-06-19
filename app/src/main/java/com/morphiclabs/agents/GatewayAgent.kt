@@ -3,6 +3,7 @@ package com.morphiclabs.agents
 import android.content.Context
 import com.morphiclabs.core.base.AgentContract
 import com.morphiclabs.core.security.KeyManager
+import com.morphiclabs.core.security.AppConfigManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -13,20 +14,20 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class GatewayAgent(private val context: Context) : AgentContract {
-    
     private val client = OkHttpClient()
     private val keyManager = KeyManager()
-    
-    private val modelName = "gemini-3.5-flash" 
+    private val appConfigManager = AppConfigManager(context)
 
-    // CORRECCIÓN: Se añadió 'suspend' para coincidir con la interfaz AgentContract
     override suspend fun canHandle(command: String): Boolean {
         return command.isNotEmpty()
     }
 
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
-        val apiKey = keyManager.getApiKey(context, "gemini") 
-            ?: return@withContext "Error: API Key no encontrada en la configuración."
+        val apiKey = keyManager.getApiKey(context, "gemini")
+            ?: return@withContext "Error: API Key no encontrada. Configúrala en Ajustes."
+
+        // Ahora obtenemos el modelo dinámicamente desde AppConfigManager
+        val modelName = appConfigManager.getModel()
 
         val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
 
@@ -52,9 +53,9 @@ class GatewayAgent(private val context: Context) : AgentContract {
         try {
             client.newCall(request).execute().use { response ->
                 val responseData = response.body?.string()
-                
+
                 if (!response.isSuccessful) {
-                    return@withContext "Error: ${response.code} - ${responseData ?: "Respuesta vacía"}"
+                    return@withContext "Error (${response.code}): El modelo '$modelName' podría no ser válido o la API Key es incorrecta."
                 }
 
                 if (responseData != null) {
