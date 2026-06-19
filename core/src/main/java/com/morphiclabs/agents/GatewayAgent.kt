@@ -1,9 +1,9 @@
 package com.morphiclabs.agents
 
 import android.content.Context
+import android.util.Log
 import com.morphiclabs.core.base.AgentContract
 import com.morphiclabs.core.base.ModelProvider
-import com.morphiclabs.core.security.KeyManager
 import com.morphiclabs.core.security.AppConfigManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,8 +16,8 @@ import org.json.JSONObject
 
 class GatewayAgent(private val context: Context) : AgentContract, ModelProvider {
     private val client = OkHttpClient()
-    private val keyManager = KeyManager()
     private val appConfigManager = AppConfigManager(context)
+    private val TAG = "GatewayAgent"
 
     override suspend fun fetchAvailableModels(apiKey: String): List<String> = withContext(Dispatchers.IO) {
         val url = "https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey"
@@ -25,7 +25,10 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
 
         try {
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext emptyList()
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Fetch Error: ${response.code} - ${response.body?.string()}")
+                    return@withContext emptyList()
+                }
                 val responseData = response.body?.string() ?: return@withContext emptyList()
                 val json = JSONObject(responseData)
                 val modelsArray = json.getJSONArray("models")
@@ -39,6 +42,7 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
                 return@withContext list
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Fetch Exception: ${e.message}")
             return@withContext emptyList()
         }
     }
@@ -46,9 +50,13 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
     override suspend fun canHandle(command: String): Boolean = command.isNotEmpty()
 
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
-        val apiKey = keyManager.getApiKey(context, "gemini") ?: return@withContext "Error: API Key no encontrada."
-        val modelName = appConfigManager.getModel()
+        val apiKey = appConfigManager.getApiKey("gemini")
+        if (apiKey.isNullOrEmpty()) return@withContext "Error: API Key no configurada."
+        
+        val modelName = appConfigManager.getModel().trim()
         val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
+        
+        Log.d(TAG, "Calling URL: $url") // <--- ESTO NOS DIRÁ SI LA URL ESTÁ BIEN FORMADA
 
         val jsonBody = JSONObject().apply {
             put("contents", JSONArray().apply {
@@ -64,10 +72,16 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
         try {
             client.newCall(request).execute().use { response ->
                 val responseData = response.body?.string()
-                if (!response.isSuccessful) return@withContext "Error (${response.code}): $modelName podría no ser válido."
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Execute Error (${response.code}): $responseData")
+                    return@withContext "Error (${response.code}): $modelName podría no ser válido."
+                }
                 return@withContext if (responseData != null) parseResponse(responseData) else "Error: Respuesta vacía."
             }
-        } catch (e: Exception) { return@withContext "Excepción: ${e.message}" }
+        } catch (e: Exception) { 
+            Log.e(TAG, "Execute Exception: ${e.message}")
+            return@withContext "Excepción: ${e.message}" 
+        }
     }
 
     private fun parseResponse(jsonResponse: String): String {
