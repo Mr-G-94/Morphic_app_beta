@@ -25,26 +25,28 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
 
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
 
-        // 1. Verificación de "Circuit Breaker"
         if (failureCount.get() >= MAX_FAILURES) {
-            val cooldown = 30_000 // 30 segundos
+            val cooldown = 30_000
             if (System.currentTimeMillis() - lastFailureTime < cooldown) {
-                return@withContext "Gateway en modo protección (Circuit Open). Intenta en unos segundos."
+                return@withContext "Gateway en modo protección. Intenta en unos segundos."
             } else {
-                failureCount.set(0) // Reset después de cooldown
+                failureCount.set(0)
             }
         }
 
         try {
-            // Cambiado a gemini-1.5-flash
             val modelName = "gemini-1.5-flash"
-            
+
+            // ESTRUCTURA CORREGIDA PARA GEMINI API
             val json = JSONObject().apply {
-                put("model", modelName)
-                put("messages", JSONArray().apply {
+                put("contents", JSONArray().apply {
                     put(JSONObject().apply {
                         put("role", "user")
-                        put("content", input)
+                        put("parts", JSONArray().apply {
+                            put(JSONObject().apply {
+                                put("text", input)
+                            })
+                        })
                     })
                 })
             }
@@ -53,7 +55,6 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
             val body = json.toString().toRequestBody(mediaType!!)
             val apiKey = context?.let { keyManager.getApiKey(it, "gemini") }
 
-            // 2. Selección de Endpoint
             if (apiKey.isNullOrEmpty()) {
                 return@withContext "Gateway Error: API Key no configurada."
             }
@@ -62,16 +63,15 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
             val request = Request.Builder().url(url).post(body).build()
 
             client.newCall(request).execute().use { response ->
+                val responseBodyString = response.body?.string() ?: ""
+                
                 if (!response.isSuccessful) {
                     handleFailure()
-                    return@withContext "Gateway Error: ${response.code} - ${response.message}"
+                    return@withContext "Gateway Error: ${response.code} - ${responseBodyString}"
                 }
 
-                val responseBody = response.body?.string() ?: return@withContext "Respuesta vacía"
-
-                // Si llegamos aquí, éxito: reset de errores
                 failureCount.set(0)
-                return@withContext parseResponse(responseBody)
+                return@withContext parseResponse(responseBodyString)
             }
         } catch (e: Exception) {
             handleFailure()
@@ -87,17 +87,15 @@ class GatewayAgent(private val context: Context? = null) : AgentContract {
     private fun parseResponse(body: String): String {
         return try {
             val json = JSONObject(body)
-            when {
-                json.has("choices") -> json.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
-                json.has("candidates") -> {
-                    // Parser para la API de Gemini (generativelanguage)
-                    val candidates = json.getJSONArray("candidates")
-                    val firstCandidate = candidates.getJSONObject(0)
-                    val content = firstCandidate.getJSONObject("content")
-                    val parts = content.getJSONArray("parts")
-                    parts.getJSONObject(0).getString("text")
-                }
-                else -> body
+            // Gemini devuelve la respuesta en candidates -> content -> parts -> text
+            if (json.has("candidates")) {
+                val candidates = json.getJSONArray("candidates")
+                val firstCandidate = candidates.getJSONObject(0)
+                val content = firstCandidate.getJSONObject("content")
+                val parts = content.getJSONArray("parts")
+                parts.getJSONObject(0).getString("text")
+            } else {
+                body
             }
         } catch (e: Exception) {
             body
