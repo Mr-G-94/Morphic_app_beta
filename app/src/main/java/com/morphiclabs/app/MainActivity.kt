@@ -9,9 +9,9 @@ import com.morphiclabs.ui.theme.MorphicLabsAppTheme
 import com.morphiclabs.di.AgentRegistry
 import com.morphiclabs.agents.KnowledgeAgent
 import com.morphiclabs.agents.GatewayAgent
-import com.morphiclabs.ui.MorphicLabsScreen
-import com.morphiclabs.core.security.AppConfigManager
+import com.morphiclabs.ui.screens.DashboardScreen
 import com.morphiclabs.ui.screens.SettingsScreen
+import com.morphiclabs.core.security.AppConfigManager
 
 class MainActivity : ComponentActivity() {
     private val agentRegistry: AgentRegistry by lazy {
@@ -35,7 +35,6 @@ class MainActivity : ComponentActivity() {
 fun MorphicLabsAppEntry(agentRegistry: AgentRegistry) {
     val context = LocalContext.current
     var showSettings by remember { mutableStateOf(false) }
-    // Instanciamos el gatewayAgent para pasarlo a SettingsScreen
     val gatewayAgent = remember { GatewayAgent(context) }
 
     if (showSettings) {
@@ -46,14 +45,8 @@ fun MorphicLabsAppEntry(agentRegistry: AgentRegistry) {
             onSave = { showSettings = false }
         )
     } else {
-        MorphicLabsScreen(
-            onNavigateToSettings = { showSettings = true },
-            messageProcessor = object : com.morphiclabs.core.MessageProcessor {
-                override suspend fun procesarMensaje(texto: String): String {
-                    val agent = agentRegistry.findAgentToHandle(texto)
-                    return agent?.execute(texto) ?: "No agent found to handle: "
-                }
-            }
+        DashboardScreen(
+            onNavigateToSettings = { showSettings = true }
         )
     }
 }
