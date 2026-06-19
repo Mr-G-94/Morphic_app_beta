@@ -8,89 +8,69 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.morphiclabs.core.security.AppConfigManager
+import com.morphiclabs.agents.GatewayAgent
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     configManager: AppConfigManager,
+    gatewayAgent: GatewayAgent,
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var telegramKey by remember { mutableStateOf(configManager.getApiKey("telegram") ?: "") }
     var whatsappKey by remember { mutableStateOf(configManager.getApiKey("whatsapp") ?: "") }
     var geminiKey by remember { mutableStateOf(configManager.getApiKey("gemini") ?: "") }
     
-    // Estado para el modelo de Gemini
     var selectedModel by remember { mutableStateOf(configManager.getModel()) }
-    var audioResponse by remember { mutableStateOf(configManager.getApiKey("mode_audio") == "true") }
+    var availableModels by remember { mutableStateOf(listOf<String>()) }
+    var expanded by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Configuración BYOK", style = MaterialTheme.typography.headlineMedium)
 
-        OutlinedTextField(
-            value = telegramKey,
-            onValueChange = { telegramKey = it },
-            label = { Text("Telegram API Token") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = geminiKey, onValueChange = { geminiKey = it }, label = { Text("Gemini API Key") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
 
-        OutlinedTextField(
-            value = whatsappKey,
-            onValueChange = { whatsappKey = it },
-            label = { Text("WhatsApp API Key") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        OutlinedTextField(
-            value = geminiKey,
-            onValueChange = { geminiKey = it },
-            label = { Text("Gemini API Key") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // Nuevo campo para configurar el modelo
-        OutlinedTextField(
-            value = selectedModel,
-            onValueChange = { selectedModel = it },
-            label = { Text("Modelo Gemini (ej. gemini-1.5-flash)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Preferir respuesta en Audio")
-            Spacer(Modifier.weight(1f))
-            Switch(
-                checked = audioResponse,
-                onCheckedChange = { audioResponse = it }
-            )
+        Button(onClick = {
+            coroutineScope.launch {
+                isLoading = true
+                availableModels = gatewayAgent.fetchAvailableModels(geminiKey)
+                isLoading = false
+            }
+        }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (isLoading) "Cargando..." else "Cargar modelos disponibles")
         }
 
-        Button(
-            onClick = {
-                configManager.saveApiKey("telegram", telegramKey)
-                configManager.saveApiKey("whatsapp", whatsappKey)
-                configManager.saveApiKey("gemini", geminiKey)
-                configManager.saveModel(selectedModel) // Persistimos el modelo
-                configManager.saveApiKey("mode_audio", audioResponse.toString())
-                onSave()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Guardar y Activar Bot")
+        if (availableModels.isNotEmpty()) {
+            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                OutlinedTextField(
+                    value = selectedModel,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Modelo Seleccionado") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    availableModels.forEach { model ->
+                        DropdownMenuItem(
+                            text = { Text(model) },
+                            onClick = { selectedModel = model; expanded = false }
+                        )
+                    }
+                }
+            }
         }
 
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Regresar al Chat")
-        }
+        Button(onClick = {
+            configManager.saveApiKey("gemini", geminiKey)
+            configManager.saveModel(selectedModel)
+            onSave()
+        }, modifier = Modifier.fillMaxWidth()) { Text("Guardar y Activar") }
+
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Regresar") }
     }
 }
