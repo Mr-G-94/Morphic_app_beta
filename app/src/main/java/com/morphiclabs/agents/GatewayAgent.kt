@@ -17,17 +17,14 @@ class GatewayAgent(private val context: Context) : AgentContract {
     private val client = OkHttpClient()
     private val keyManager = KeyManager()
     
-    // Este modelo fue validado en tu consulta curl previa
     private val modelName = "gemini-3.5-flash" 
 
-    override fun canHandle(command: String): Boolean {
-        // Por ahora, este agente maneja todo lo que llega
-        return true 
+    // CORRECCIÓN: Se añadió 'suspend' para coincidir con la interfaz AgentContract
+    override suspend fun canHandle(command: String): Boolean {
+        return command.isNotEmpty()
     }
 
     override suspend fun execute(input: String): String = withContext(Dispatchers.IO) {
-        // Recuperamos la clave usando tu KeyManager
-        // Asegúrate de que "gemini" sea el nombre correcto de la llave en tus preferencias
         val apiKey = keyManager.getApiKey(context, "gemini") 
             ?: return@withContext "Error: API Key no encontrada en la configuración."
 
