@@ -26,57 +26,19 @@ import com.morphiclabs.ui.screens.SettingsScreen
 import com.morphiclabs.app.services.BotService
 
 class MainActivity : ComponentActivity() {
-    private val agentRegistry: AgentRegistry = AgentRegistry()
+    // Inicialización con registro de agentes
+    private val agentRegistry: AgentRegistry by lazy {
+        AgentRegistry().apply {
+            registerAgent(GatewayAgent(this@MainActivity))
+            registerAgent(KnowledgeAgent(this@MainActivity))
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        agentRegistry.registerAgent(object : AgentContract {
-            override suspend fun canHandle(command: String): Boolean {
-                return command.contains("hello", ignoreCase = true)
-            }
-            override suspend fun execute(input: String): String {
-                return "Hello from Dummy Agent! You said: $input"
-            }
-        })
-
-        agentRegistry.registerAgent(KnowledgeAgent(this))
-        agentRegistry.registerAgent(GatewayAgent(this))
-
         setContent {
             MorphicLabsAppTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val configManager = remember { AppConfigManager(this) }
-                    var showSettings by remember { mutableStateOf(false) }
-
-                    if (showSettings) {
-                        SettingsScreen(
-                            configManager = configManager,
-                            onBack = { showSettings = false },
-                            onSave = {
-                                // Disparamos el BotService al guardar
-                                val intent = Intent(this, BotService::class.java)
-                                startForegroundService(intent)
-                            }
-                        )
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            MorphicLabsAppEntry(agentRegistry = agentRegistry)
-
-                            FloatingActionButton(
-                                onClick = { showSettings = true },
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(16.dp)
-                            ) {
-                                Text("⚙️")
-                            }
-                        }
-                    }
-                }
+                MorphicLabsAppEntry(agentRegistry)
             }
         }
     }
