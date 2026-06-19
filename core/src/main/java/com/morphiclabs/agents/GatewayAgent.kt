@@ -1,7 +1,6 @@
 package com.morphiclabs.agents
 
 import android.content.Context
-import android.util.Log
 import com.morphiclabs.core.base.AgentContract
 import com.morphiclabs.core.base.ModelProvider
 import com.morphiclabs.core.security.AppConfigManager
@@ -17,18 +16,13 @@ import org.json.JSONObject
 class GatewayAgent(private val context: Context) : AgentContract, ModelProvider {
     private val client = OkHttpClient()
     private val appConfigManager = AppConfigManager(context)
-    private val TAG = "GatewayAgent"
 
     override suspend fun fetchAvailableModels(apiKey: String): List<String> = withContext(Dispatchers.IO) {
         val url = "https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey"
         val request = Request.Builder().url(url).get().build()
-
         try {
             client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    Log.e(TAG, "Fetch Error: ${response.code} - ${response.body?.string()}")
-                    return@withContext emptyList()
-                }
+                if (!response.isSuccessful) return@withContext emptyList()
                 val responseData = response.body?.string() ?: return@withContext emptyList()
                 val json = JSONObject(responseData)
                 val modelsArray = json.getJSONArray("models")
@@ -41,10 +35,7 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
                 }
                 return@withContext list
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Fetch Exception: ${e.message}")
-            return@withContext emptyList()
-        }
+        } catch (e: Exception) { return@withContext emptyList() }
     }
 
     override suspend fun canHandle(command: String): Boolean = command.isNotEmpty()
@@ -56,8 +47,6 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
         val modelName = appConfigManager.getModel().trim()
         val url = "https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$apiKey"
         
-        Log.d(TAG, "Calling URL: $url") // <--- ESTO NOS DIRÁ SI LA URL ESTÁ BIEN FORMADA
-
         val jsonBody = JSONObject().apply {
             put("contents", JSONArray().apply {
                 put(JSONObject().apply {
@@ -73,15 +62,12 @@ class GatewayAgent(private val context: Context) : AgentContract, ModelProvider 
             client.newCall(request).execute().use { response ->
                 val responseData = response.body?.string()
                 if (!response.isSuccessful) {
-                    Log.e(TAG, "Execute Error (${response.code}): $responseData")
-                    return@withContext "Error (${response.code}): $modelName podría no ser válido."
+                    // AQUÍ ESTÁ EL CAMBIO: Te devolvemos el texto del error real
+                    return@withContext "Error HTTP ${response.code}: $responseData"
                 }
                 return@withContext if (responseData != null) parseResponse(responseData) else "Error: Respuesta vacía."
             }
-        } catch (e: Exception) { 
-            Log.e(TAG, "Execute Exception: ${e.message}")
-            return@withContext "Excepción: ${e.message}" 
-        }
+        } catch (e: Exception) { return@withContext "Excepción: ${e.message}" }
     }
 
     private fun parseResponse(jsonResponse: String): String {
