@@ -3,6 +3,7 @@ package com.morphiclabs.app.services
 import android.app.*
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.morphiclabs.core.dispatchers.BotDispatcher
 import com.morphiclabs.core.services.InventoryService
@@ -19,9 +20,9 @@ class BotService : Service() {
     private val inventoryService = InventoryService(this)
     private val clientDB = ClientDB(this)
     private val appConfigManager = AppConfigManager(this)
+    private val TAG = "MorphicBot"
     
     private lateinit var telegramService: TelegramService
-    // Aquí pasamos 'this' como contexto
     private val dispatcher = BotDispatcher(AgentRegistry(), inventoryService, clientDB, this)
 
     override fun onCreate() {
@@ -29,7 +30,10 @@ class BotService : Service() {
         
         val token = appConfigManager.getApiKey("telegram") ?: ""
         if (token.isNotEmpty()) {
+            Log.d(TAG, "Token de Telegram cargado correctamente.")
             telegramService = TelegramService(token)
+        } else {
+            Log.e(TAG, "Error: Token de Telegram está vacío.")
         }
 
         val channelId = "morphic_bot_channel"
@@ -47,13 +51,17 @@ class BotService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (::telegramService.isInitialized) {
+            Log.d(TAG, "Iniciando servicio de Telegram...")
             serviceScope.launch { listenToTelegram() }
+        } else {
+            Log.e(TAG, "No se puede iniciar listenToTelegram porque telegramService no está inicializado.")
         }
         return START_STICKY
     }
 
     private suspend fun listenToTelegram() {
         var lastUpdateId = 0L
+        Log.d(TAG, "Bucle de Telegram iniciado.")
         while (serviceScope.isActive) {
             try {
                 val updatesJson = telegramService.getUpdates(lastUpdateId)
@@ -70,6 +78,7 @@ class BotService : Service() {
                                 val chatId = message.getJSONObject("chat").getLong("id").toString()
                                 val text = message.optString("text")
                                 
+                                Log.d(TAG, "Mensaje recibido: $text")
                                 if (text.isNotEmpty()) {
                                     val response = dispatcher.dispatch("telegram", chatId, text)
                                     telegramService.sendMessage(chatId, response)
@@ -79,6 +88,7 @@ class BotService : Service() {
                     }
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Error en bucle de Telegram: ${e.message}")
                 delay(5000)
             }
             delay(1000)
