@@ -35,10 +35,13 @@ class MainActivity : ComponentActivity() {
 fun MorphicLabsAppEntry(agentRegistry: AgentRegistry) {
     val context = LocalContext.current
     var showSettings by remember { mutableStateOf(false) }
+    // Instanciamos el gatewayAgent para pasarlo a SettingsScreen
+    val gatewayAgent = remember { GatewayAgent(context) }
 
     if (showSettings) {
         SettingsScreen(
             configManager = AppConfigManager(context),
+            modelProvider = gatewayAgent,
             onBack = { showSettings = false },
             onSave = { showSettings = false }
         )
@@ -48,7 +51,7 @@ fun MorphicLabsAppEntry(agentRegistry: AgentRegistry) {
             messageProcessor = object : com.morphiclabs.core.MessageProcessor {
                 override suspend fun procesarMensaje(texto: String): String {
                     val agent = agentRegistry.findAgentToHandle(texto)
-                    return agent?.execute(texto) ?: "No agent found to handle: $texto"
+                    return agent?.execute(texto) ?: "No agent found to handle: "
                 }
             }
         )

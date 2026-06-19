@@ -2,6 +2,7 @@ package com.morphiclabs.agents
 
 import android.content.Context
 import com.morphiclabs.core.base.AgentContract
+import com.morphiclabs.core.base.ModelProvider
 import com.morphiclabs.core.security.KeyManager
 import com.morphiclabs.core.security.AppConfigManager
 import kotlinx.coroutines.Dispatchers
@@ -13,16 +14,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
-class GatewayAgent(private val context: Context) : AgentContract {
+class GatewayAgent(private val context: Context) : AgentContract, ModelProvider {
     private val client = OkHttpClient()
     private val keyManager = KeyManager()
     private val appConfigManager = AppConfigManager(context)
 
-    // Función para obtener la lista de modelos desde la API
-    suspend fun fetchAvailableModels(apiKey: String): List<String> = withContext(Dispatchers.IO) {
+    override suspend fun fetchAvailableModels(apiKey: String): List<String> = withContext(Dispatchers.IO) {
         val url = "https://generativelanguage.googleapis.com/v1beta/models?key=$apiKey"
         val request = Request.Builder().url(url).get().build()
-        
+
         try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext emptyList()
@@ -32,7 +32,6 @@ class GatewayAgent(private val context: Context) : AgentContract {
                 val list = mutableListOf<String>()
                 for (i in 0 until modelsArray.length()) {
                     val modelName = modelsArray.getJSONObject(i).getString("name")
-                    // Filtramos solo los que empiezan con 'models/gemini'
                     if (modelName.startsWith("models/gemini")) {
                         list.add(modelName.replace("models/", ""))
                     }
@@ -59,7 +58,6 @@ class GatewayAgent(private val context: Context) : AgentContract {
                 })
             })
         }
-
         val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
         val request = Request.Builder().url(url).post(requestBody).build()
 

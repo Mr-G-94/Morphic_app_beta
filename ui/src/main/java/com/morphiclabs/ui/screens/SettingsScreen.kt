@@ -8,14 +8,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.morphiclabs.core.security.AppConfigManager
-import com.morphiclabs.agents.GatewayAgent
+import com.morphiclabs.core.base.ModelProvider
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     configManager: AppConfigManager,
-    gatewayAgent: GatewayAgent,
+    modelProvider: ModelProvider,
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
@@ -23,7 +23,7 @@ fun SettingsScreen(
     var telegramKey by remember { mutableStateOf(configManager.getApiKey("telegram") ?: "") }
     var whatsappKey by remember { mutableStateOf(configManager.getApiKey("whatsapp") ?: "") }
     var geminiKey by remember { mutableStateOf(configManager.getApiKey("gemini") ?: "") }
-    
+
     var selectedModel by remember { mutableStateOf(configManager.getModel()) }
     var availableModels by remember { mutableStateOf(listOf<String>()) }
     var expanded by remember { mutableStateOf(false) }
@@ -37,7 +37,7 @@ fun SettingsScreen(
         Button(onClick = {
             coroutineScope.launch {
                 isLoading = true
-                availableModels = gatewayAgent.fetchAvailableModels(geminiKey)
+                availableModels = modelProvider.fetchAvailableModels(geminiKey)
                 isLoading = false
             }
         }, modifier = Modifier.fillMaxWidth()) {
